@@ -288,7 +288,7 @@ export default function App() {
               <div className="flex flex-col gap-3">
                 <p className="text-sm font-bold uppercase tracking-widest text-orange-900/40">Contactate conmigo</p>
                 <a
-                  href="https://wa.me/543364012374?text=Quiero%20mi%20sesión%20gratuita..."
+                  href="https://wa.me/543364012374?text=Quiero%20mi%20libro%20..."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-emerald-100 text-emerald-900 hover:bg-emerald-200 transition-all w-fit shadow-sm"
