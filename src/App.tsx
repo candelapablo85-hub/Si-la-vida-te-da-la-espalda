@@ -46,7 +46,7 @@ const BOOK_DATA = {
   ],
   coverUrl: "https://picsum.photos/seed/bookcover_warm/800/1200", // Tapa y Contratapa
   frontCoverUrl: "https://picsum.photos/seed/bookcover_warm/600/900", // Tapa sola
-  authorImage: "public/imagenes/Foto perfil.png",
+  authorImage: "/Imagenes/Foto perfil.png",
   testimonials: [
     {
       text: "Una dosis necesaria de realidad y humor. Pablo logra que te rías de tus propios dramas.",
@@ -69,7 +69,7 @@ export default function App() {
             <span className="font-serif font-bold text-xl tracking-tight">Pablo Candela</span>
             <div className="w-6 h-9 overflow-hidden rounded-[2px] shadow-sm border border-orange-900/10">
               <img
-                src="/Public/imagenes/Tapa.png"
+                src="/Imagenes/Tapa.png"
                 className="w-full h-full object-cover"
                 alt="Mini Tapa"
                 referrerPolicy="no-referrer"
@@ -134,7 +134,7 @@ export default function App() {
           >
             <div className="relative w-full max-w-[500px] shadow-2xl rounded-lg overflow-hidden transform hover:scale-105 transition-transform duration-500 group">
               <img
-                src="/Public/imagenes/Tapa.png"
+                src="/Imagenes/Tapa.png"
                 alt="Tapa y Contratapa"
                 className="w-full h-auto object-cover"
                 referrerPolicy="no-referrer"
