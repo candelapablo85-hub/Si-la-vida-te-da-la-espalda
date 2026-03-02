@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://si-la-vida-te-da-la-espalda.vercel.app/sitemap.xml
