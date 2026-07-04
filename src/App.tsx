@@ -84,7 +84,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [adminLoading, setAdminLoading] = React.useState(false);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'http://127.0.0.1:3001' : '');
+  const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'http://127.0.0.1:3001' : window.location.origin);
   const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
 
   React.useEffect(() => {
@@ -106,7 +106,7 @@ export default function App() {
     setAdminLoading(true);
     setAdminError('');
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(apiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pwd })
