@@ -84,7 +84,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [adminLoading, setAdminLoading] = React.useState(false);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'http://127.0.0.1:3001' : window.location.origin);
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
   const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
 
   React.useEffect(() => {
