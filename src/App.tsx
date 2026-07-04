@@ -145,7 +145,6 @@ export default function App() {
   const handleAdminLogout = () => {
     setIsLoggedIn(false);
     setAdminPassword('');
-
     window.location.hash = '';
   };
 
