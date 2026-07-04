@@ -13,7 +13,13 @@ import {
   Linkedin,
   Instagram,
   CheckCircle2,
-  Quote
+  Quote,
+  X,
+  Search,
+  Download,
+  LogOut,
+  Lock,
+  Loader2
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -60,6 +66,312 @@ const BOOK_DATA = {
 };
 
 export default function App() {
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [subscribe, setSubscribe] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  // Admin states
+  const [isAdmin, setIsAdmin] = React.useState(window.location.hash === '#admin');
+  const [adminPassword, setAdminPassword] = React.useState(localStorage.getItem('admin_pwd') || '');
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [adminError, setAdminError] = React.useState('');
+  const [registrations, setRegistrations] = React.useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [adminLoading, setAdminLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      setIsAdmin(window.location.hash === '#admin');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Check login on mount / when password changes
+  React.useEffect(() => {
+    if (isAdmin && adminPassword) {
+      verifyPassword(adminPassword);
+    }
+  }, [isAdmin, adminPassword]);
+
+  const verifyPassword = async (pwd: string) => {
+    setAdminLoading(true);
+    setAdminError('');
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsLoggedIn(true);
+        localStorage.setItem('admin_pwd', pwd);
+        fetchRegistrations(pwd);
+      } else {
+        setIsLoggedIn(false);
+        setAdminError(data.error || 'Contraseña incorrecta');
+        localStorage.removeItem('admin_pwd');
+      }
+    } catch (err) {
+      setAdminError('Error al conectar con el servidor.');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const fetchRegistrations = async (pwd: string) => {
+    try {
+      const res = await fetch('/api/admin/registrations', {
+        headers: { 'Authorization': `Bearer ${pwd}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRegistrations(data.registrations);
+      }
+    } catch (err) {
+      console.error('Error fetching registrations:', err);
+    }
+  };
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    verifyPassword(adminPassword);
+  };
+
+  const handleAdminLogout = () => {
+    setIsLoggedIn(false);
+    setAdminPassword('');
+    localStorage.removeItem('admin_pwd');
+    window.location.hash = '';
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const res = await fetch('/api/admin/registrations/export', {
+        headers: { 'Authorization': `Bearer ${adminPassword}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'registrados_libro.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('Error al exportar CSV');
+      }
+    } catch (err) {
+      console.error('Error exporting CSV:', err);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      setError('Por favor, completa todos los campos.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSuccess(true);
+        // Disparar la descarga del PDF
+        triggerDownload();
+      } else {
+        setError(data.error || 'Hubo un error al procesar el registro.');
+      }
+    } catch (err) {
+      setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerDownload = () => {
+    const link = document.createElement('a');
+    link.href = '/Si la vida te da la espalda - Version Gratuita PDF.pdf';
+    link.download = 'Si la vida te da la espalda - Version Gratuita PDF.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const openDownloadModal = () => {
+    setIsModalOpen(true);
+    setSuccess(false);
+    setError('');
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col font-sans">
+        {/* Navigation */}
+        <nav className="border-b border-stone-850 bg-stone-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-serif font-bold text-xl tracking-tight text-white">Pablo Candela</span>
+              <span className="px-2 py-0.5 bg-orange-700/20 text-orange-400 text-xs font-bold rounded border border-orange-500/20">ADMIN</span>
+            </div>
+            <button
+              onClick={handleAdminLogout}
+              className="text-stone-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" /> Salir
+            </button>
+          </div>
+        </nav>
+
+        {/* Content */}
+        <div className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+          {!isLoggedIn ? (
+            /* Login Form */
+            <div className="max-w-md mx-auto mt-20 bg-stone-950/50 backdrop-blur-sm p-8 rounded-3xl border border-stone-800 shadow-2xl">
+              <div className="text-center mb-8">
+                <div className="w-12 h-12 bg-orange-700/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h2 className="font-serif text-2xl text-white font-semibold">Acceso Administrador</h2>
+                <p className="text-stone-400 text-sm mt-2 font-medium">Ingresá la contraseña para acceder a la base de datos de mails.</p>
+              </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-stone-400 mb-2 tracking-wider">Contraseña</label>
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-stone-900 border border-stone-850 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder:text-stone-600 text-sm font-medium"
+                    required
+                  />
+                </div>
+
+                {adminError && (
+                  <p className="text-red-400 text-sm font-medium">{adminError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={adminLoading}
+                  className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold py-3.5 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {adminLoading ? 'Verificando...' : 'Ingresar'}
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* Dashboard */
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h1 className="text-3xl font-serif font-bold text-white">Contactos Registrados</h1>
+                  <p className="text-stone-400 text-sm mt-1 font-medium">
+                    Gente interesada que descargó la versión gratuita del libro. Total: {registrations.length}
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportCSV}
+                  className="bg-orange-700 hover:bg-orange-650 text-white px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-900/20 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Exportar a CSV
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="relative">
+                <Search className="w-5 h-5 text-stone-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-stone-950/50 border border-stone-800 rounded-2xl pl-12 pr-4 py-3.5 text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-sm font-medium"
+                />
+              </div>
+
+              {/* Table */}
+              <div className="bg-stone-950/30 border border-stone-800 rounded-2rem overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-stone-800 bg-stone-950/55 text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                        <th className="px-6 py-4">ID</th>
+                        <th className="px-6 py-4">Nombre</th>
+                        <th className="px-6 py-4">Email</th>
+                        <th className="px-6 py-4">Fecha de descarga</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-850/50 text-sm text-stone-300">
+                      {registrations
+                        .filter((r) =>
+                          r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          r.email.toLowerCase().includes(searchTerm.toLowerCase())
+                        )
+                        .map((reg) => (
+                          <tr key={reg.id} className="hover:bg-stone-900/10 transition-colors">
+                            <td className="px-6 py-4 text-stone-500 font-mono">#{reg.id}</td>
+                            <td className="px-6 py-4 font-semibold text-white">{reg.name}</td>
+                            <td className="px-6 py-4">{reg.email}</td>
+                            <td className="px-6 py-4 text-stone-400">{formatDate(reg.created_at)}</td>
+                          </tr>
+                        ))}
+                      {registrations.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center text-stone-500 italic font-medium">
+                            No se encontraron registros.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen font-sans bg-[#F9F4F0]">
       {/* Navigation */}
@@ -123,6 +435,12 @@ export default function App() {
               >
                 Comprar Libro Digital <ArrowRight className="w-4 h-4" />
               </a>
+              <button
+                onClick={openDownloadModal}
+                className="bg-transparent text-orange-950 border-2 border-orange-950/20 px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:bg-orange-950 hover:text-white transition-all cursor-pointer"
+              >
+                Descargar Adelanto Gratis <BookOpen className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
 
@@ -239,6 +557,15 @@ export default function App() {
               </ul>
             </motion.div>
           </div>
+
+          <div className="mt-16 text-center">
+            <button
+              onClick={openDownloadModal}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-5 rounded-full font-bold text-lg inline-flex items-center gap-3 transition-all shadow-xl shadow-orange-950/40 cursor-pointer"
+            >
+              Descargar Versión Gratuita (PDF) <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -331,9 +658,141 @@ export default function App() {
           <div className="flex gap-6 text-sm font-medium text-stone-500">
             <a href="#" className="hover:text-orange-700">Contacto</a>
             <a href="#" className="hover:text-orange-700">Prensa</a>
+            <a href="#admin" className="hover:text-orange-700 text-stone-400">Admin</a>
           </div>
         </div>
       </footer>
+
+      {/* Modal de Registro */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-orange-950/40 backdrop-blur-md"
+            onClick={() => !loading && setIsModalOpen(false)}
+          />
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-[#FDFBF7] rounded-[2rem] p-8 max-w-md w-full border border-orange-900/10 shadow-2xl relative z-10 overflow-hidden"
+          >
+            {/* Decors */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange-200 rounded-full blur-3xl opacity-40 pointer-events-none" />
+
+            <button
+              onClick={() => setIsModalOpen(false)}
+              disabled={loading}
+              className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 transition-colors disabled:opacity-30 cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {!success ? (
+              <div>
+                <span className="inline-block px-3 py-1 bg-orange-100 text-orange-850 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                  Acceso Gratuito
+                </span>
+                <h3 className="font-serif text-3xl font-bold text-orange-950 mb-3">
+                  Descargá el adelanto
+                </h3>
+                <p className="text-stone-650 text-sm mb-6 leading-relaxed">
+                  Completá tus datos para descargar gratis el primer capítulo de <strong>{BOOK_DATA.title}</strong> y sumarte a la comunidad.
+                </p>
+
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-stone-500 mb-1.5 tracking-wider">Nombre Completo</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ej: Juan Pérez"
+                      className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-stone-850 focus:outline-none focus:ring-2 focus:ring-orange-500/30 placeholder:text-stone-400 text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-stone-500 mb-1.5 tracking-wider">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Ej: juan@example.com"
+                      className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-stone-850 focus:outline-none focus:ring-2 focus:ring-orange-500/30 placeholder:text-stone-400 text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-2">
+                    <input
+                      type="checkbox"
+                      id="subscribe"
+                      checked={subscribe}
+                      onChange={(e) => setSubscribe(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-stone-300 text-orange-700 focus:ring-orange-500/50 accent-orange-700"
+                    />
+                    <label htmlFor="subscribe" className="text-xs text-stone-500 leading-normal select-none">
+                      Quiero recibir reflexiones, novedades y correos de Pablo Candela.
+                    </label>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-150 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-orange-700 text-white font-bold py-3.5 rounded-full hover:bg-orange-850 transition-colors shadow-lg shadow-orange-700/10 flex items-center justify-center gap-2 text-sm disabled:opacity-50 mt-4 cursor-pointer"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Procesando...
+                      </>
+                    ) : (
+                      <>
+                        Descargar Ahora <Download className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-200">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="font-serif text-3xl font-bold text-orange-950 mb-3">
+                  ¡Todo Listo!
+                </h3>
+                <p className="text-stone-650 text-sm mb-6 leading-relaxed max-w-xs mx-auto">
+                  La descarga de <strong>"{BOOK_DATA.title} - Version Gratuita"</strong> ya comenzó.
+                </p>
+                <div className="space-y-4">
+                  <button
+                    onClick={triggerDownload}
+                    className="inline-flex items-center gap-2 text-orange-700 hover:text-orange-900 font-bold text-sm underline cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" /> ¿No empezó? Hacé clic acá
+                  </button>
+                  
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="block w-full bg-orange-50 border border-orange-200 text-orange-950 font-bold py-3.5 rounded-full hover:bg-orange-100 transition-colors text-sm mt-4 cursor-pointer"
+                  >
+                    Cerrar ventana
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
