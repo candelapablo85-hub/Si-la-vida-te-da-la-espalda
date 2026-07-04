@@ -1,5 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import Database from 'better-sqlite3';
+import fs from 'fs';
+import path from 'path';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -8,7 +11,23 @@ const app = express();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SQLITE_DB_PATH = process.env.SQLITE_DB_PATH || './data/registrations.db';
 const PDF_DOWNLOAD_URL = process.env.PDF_DOWNLOAD_URL || process.env.SUPABASE_PDF_URL || 'https://vcdfxurpfznhcwsmyhvx.supabase.co/storage/v1/object/public/Descargas/Si%20la%20vida%20te%20da%20la%20espalda%20-%20Version%20Gratuita%20PDF.pdf';
+
+const dbDirectory = path.dirname(SQLITE_DB_PATH);
+if (!fs.existsSync(dbDirectory)) {
+  fs.mkdirSync(dbDirectory, { recursive: true });
+}
+
+const db = new Database(SQLITE_DB_PATH);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS registrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+  );
+`);
 
 app.use(express.json());
 
@@ -31,7 +50,6 @@ const getSupabaseHeaders = () => ({
 
 async function saveRegistrationToSupabase(name: string, email: string) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn('[Supabase] No configurado. El registro se aceptará sin persistencia.');
     return { success: true, skipped: true };
   }
 
@@ -54,6 +72,28 @@ async function saveRegistrationToSupabase(name: string, email: string) {
   } catch (error) {
     console.error('[Supabase] Error al guardar registro:', error);
     return { success: false, error: 'No se pudo guardar en Supabase.' };
+  }
+}
+
+function saveRegistrationToLocalDB(name: string, email: string) {
+  try {
+    const stmt = db.prepare(`INSERT INTO registrations (name, email, created_at) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET name=excluded.name, created_at=excluded.created_at`);
+    stmt.run(name, email, new Date().toISOString());
+    return { success: true };
+  } catch (error) {
+    console.error('[SQLite] Error al guardar registro local:', error);
+    return { success: false, error: 'No se pudo guardar en la base local.' };
+  }
+}
+
+function getRegistrationsFromLocalDB() {
+  try {
+    const stmt = db.prepare(`SELECT id, name, email, created_at FROM registrations ORDER BY datetime(created_at) DESC`);
+    const registrations = stmt.all();
+    return { success: true, registrations };
+  } catch (error) {
+    console.error('[SQLite] Error al leer registros locales:', error);
+    return { success: false, registrations: [] };
   }
 }
 
@@ -95,28 +135,25 @@ app.post('/api/register', async (req, res) => {
   const cleanName = name.trim();
   const cleanEmail = email.trim().toLowerCase();
 
+  const localResult = saveRegistrationToLocalDB(cleanName, cleanEmail);
   const supabaseResult = await saveRegistrationToSupabase(cleanName, cleanEmail);
 
-  if (supabaseResult.success) {
-    if (supabaseResult.skipped) {
-      console.log(`[Registro] Aceptado sin persistencia: ${cleanEmail}`);
-    } else {
-      console.log(`[Supabase] Registro guardado: ${cleanEmail}`);
-    }
-
-    return res.json({
-      success: true,
-      message: '¡Registro completado con éxito!',
-      source: supabaseResult.skipped ? 'local-fallback' : 'supabase'
-    });
+  if (!localResult.success) {
+    return res.status(500).json({ error: localResult.error || 'Error interno al guardar el registro.' });
   }
 
-  console.warn(`[Registro] Supabase no disponible; se aceptó el registro sin persistencia: ${cleanEmail}`);
+  if (supabaseResult.success && !supabaseResult.skipped) {
+    console.log(`[Supabase] Registro guardado: ${cleanEmail}`);
+  } else if (supabaseResult.skipped) {
+    console.log(`[Registro] Guardado localmente: ${cleanEmail}`);
+  } else {
+    console.warn(`[Supabase] No disponible para ${cleanEmail}, se guardó localmente.`);
+  }
+
   return res.json({
     success: true,
     message: '¡Registro completado con éxito!',
-    source: 'local-fallback',
-    warning: 'No se pudo persistir en Supabase.'
+    source: supabaseResult.success && !supabaseResult.skipped ? 'supabase' : 'local'
   });
 });
 
@@ -166,7 +203,8 @@ app.get('/api/admin/registrations', authenticateAdmin, async (req, res) => {
     return res.json({ success: true, registrations: supabaseRegistrations.registrations });
   }
 
-  res.json({ success: true, registrations: [] });
+  const localRegistrations = getRegistrationsFromLocalDB();
+  return res.json({ success: true, registrations: localRegistrations.registrations });
 });
 
 // Exportar CSV (Admin)
@@ -176,6 +214,9 @@ app.get('/api/admin/registrations/export', authenticateAdmin, async (req, res) =
   const supabaseRegistrations = await getRegistrationsFromSupabase();
   if (supabaseRegistrations.success) {
     registrations = supabaseRegistrations.registrations;
+  } else {
+    const localRegistrations = getRegistrationsFromLocalDB();
+    registrations = localRegistrations.registrations;
   }
 
   try {
