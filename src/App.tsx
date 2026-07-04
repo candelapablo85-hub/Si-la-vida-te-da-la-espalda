@@ -77,7 +77,7 @@ export default function App() {
 
   // Admin states
   const [isAdmin, setIsAdmin] = React.useState(window.location.hash === '#admin');
-  const [adminPassword, setAdminPassword] = React.useState(localStorage.getItem('admin_pwd') || '');
+  const [adminPassword, setAdminPassword] = React.useState('');
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [adminError, setAdminError] = React.useState('');
   const [registrations, setRegistrations] = React.useState<any[]>([]);
@@ -111,12 +111,10 @@ export default function App() {
       const data = await res.json();
       if (res.ok && data.success) {
         setIsLoggedIn(true);
-        localStorage.setItem('admin_pwd', pwd);
         fetchRegistrations(pwd);
       } else {
         setIsLoggedIn(false);
         setAdminError(data.error || 'Contraseña incorrecta');
-        localStorage.removeItem('admin_pwd');
       }
     } catch (err) {
       setAdminError('Error al conectar con el servidor.');
@@ -147,7 +145,7 @@ export default function App() {
   const handleAdminLogout = () => {
     setIsLoggedIn(false);
     setAdminPassword('');
-    localStorage.removeItem('admin_pwd');
+
     window.location.hash = '';
   };
 
@@ -208,7 +206,7 @@ export default function App() {
 
   const triggerDownload = () => {
     const link = document.createElement('a');
-    link.href = '/Si la vida te da la espalda - Version Gratuita PDF.pdf';
+    link.href = '/api/download';
     link.download = 'Si la vida te da la espalda - Version Gratuita PDF.pdf';
     document.body.appendChild(link);
     link.click();
