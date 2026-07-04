@@ -84,6 +84,9 @@ export default function App() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [adminLoading, setAdminLoading] = React.useState(false);
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'http://127.0.0.1:3001' : '');
+  const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
+
   React.useEffect(() => {
     const handleHashChange = () => {
       setIsAdmin(window.location.hash === '#admin');
@@ -125,7 +128,7 @@ export default function App() {
 
   const fetchRegistrations = async (pwd: string) => {
     try {
-      const res = await fetch('/api/admin/registrations', {
+      const res = await fetch(apiUrl('/api/admin/registrations'), {
         headers: { 'Authorization': `Bearer ${pwd}` }
       });
       const data = await res.json();
@@ -150,7 +153,7 @@ export default function App() {
 
   const handleExportCSV = async () => {
     try {
-      const res = await fetch('/api/admin/registrations/export', {
+      const res = await fetch(apiUrl('/api/admin/registrations/export'), {
         headers: { 'Authorization': `Bearer ${adminPassword}` }
       });
       if (res.ok) {
@@ -182,7 +185,7 @@ export default function App() {
     setError('');
 
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch(apiUrl('/api/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email })
@@ -205,7 +208,7 @@ export default function App() {
 
   const triggerDownload = () => {
     const link = document.createElement('a');
-    link.href = '/api/download';
+    link.href = apiUrl('/api/download');
     link.download = 'Si la vida te da la espalda - Version Gratuita PDF.pdf';
     document.body.appendChild(link);
     link.click();
