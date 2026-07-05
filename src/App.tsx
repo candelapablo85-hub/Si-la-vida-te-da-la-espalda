@@ -89,11 +89,11 @@ export default function App() {
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
 
-  const supabaseRestUrl = supabaseRawUrl
-    ? supabaseRawUrl.replace(/\/$/, '').endsWith('/rest/v1')
-      ? supabaseRawUrl.replace(/\/$/, '')
-      : `${supabaseRawUrl.replace(/\/$/, '')}/rest/v1`
-    : '';
+  const supabaseRestUrl = (() => {
+    if (!supabaseRawUrl) return '';
+    const cleanUrl = supabaseRawUrl.replace(/\/$/, '');
+    return cleanUrl.endsWith('/rest/v1') ? cleanUrl : `${cleanUrl}/rest/v1`;
+  })();
 
   const apiUrl = (path: string) => apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 
@@ -122,8 +122,26 @@ export default function App() {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'No se pudo guardar en Supabase.');
+      const text = await response.text();
+      let message = 'No se pudo guardar en Supabase.';
+      try {
+        const json = JSON.parse(text);
+        if (json.msg) message = String(json.msg);
+        else if (json.message) message = String(json.message);
+        else if (json.error && typeof json.error === 'string') message = json.error;
+      } catch {
+        if (text) message = text;
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        message = `Permisos insuficientes en Supabase. ${message}`;
+      } else if (response.status === 404) {
+        message = 'La URL de Supabase parece incorrecta. Usa la URL base del proyecto sin /rest/v1/.';
+      } else if (response.status === 400) {
+        message = `Error de Supabase: ${message}`;
+      }
+
+      throw new Error(message);
     }
 
     return { success: true };
