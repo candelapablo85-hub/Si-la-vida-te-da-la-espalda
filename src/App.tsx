@@ -200,7 +200,7 @@ export default function App() {
         setError(data.error || 'Hubo un error al procesar el registro.');
       }
     } catch (err) {
-      setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
+      setError(`No se pudo conectar con el servidor ${apiUrl('/api/register')}. Por favor, intenta de nuevo.`);
     } finally {
       setLoading(false);
     }
