@@ -7,18 +7,13 @@ import React from 'react';
 import { motion } from 'motion/react';
 import {
   BookOpen,
-  Calendar,
-  MapPin,
   ArrowRight,
   Linkedin,
   Instagram,
   CheckCircle2,
   Quote,
   X,
-  Search,
   Download,
-  LogOut,
-  Lock,
   Loader2
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
@@ -76,15 +71,6 @@ export default function App() {
   const [success, setSuccess] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  // Admin states
-  const [isAdmin, setIsAdmin] = React.useState(window.location.hash === '#admin');
-  const [adminPassword, setAdminPassword] = React.useState('');
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-  const [adminError, setAdminError] = React.useState('');
-  const [registrations, setRegistrations] = React.useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [adminLoading, setAdminLoading] = React.useState(false);
-
   const apiBaseUrl = import.meta.env.VITE_API_URL || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
   const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
@@ -97,93 +83,6 @@ export default function App() {
     }
     const url = apiUrl(path);
     return fetch(url, options);
-  };
-
-  React.useEffect(() => {
-    const handleHashChange = () => {
-      setIsAdmin(window.location.hash === '#admin');
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  // Check login on mount / when password changes
-  React.useEffect(() => {
-    if (isAdmin && adminPassword) {
-      verifyPassword(adminPassword);
-    }
-  }, [isAdmin, adminPassword]);
-
-  const verifyPassword = async (pwd: string) => {
-    setAdminLoading(true);
-    setAdminError('');
-    try {
-      const res = await apiFetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwd })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsLoggedIn(true);
-        fetchRegistrations(pwd);
-      } else {
-        setIsLoggedIn(false);
-        setAdminError(data.error || 'Contraseña incorrecta');
-      }
-    } catch (err) {
-      setAdminError('Error al conectar con el servidor.');
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const fetchRegistrations = async (pwd: string) => {
-    try {
-      const res = await apiFetch('/api/admin/registrations', {
-        headers: { 'Authorization': `Bearer ${pwd}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setRegistrations(data.registrations);
-      }
-    } catch (err) {
-      console.error('Error fetching registrations:', err);
-    }
-  };
-
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    verifyPassword(adminPassword);
-  };
-
-  const handleAdminLogout = () => {
-    setIsLoggedIn(false);
-    setAdminPassword('');
-    window.location.hash = '';
-  };
-
-  const handleExportCSV = async () => {
-    try {
-      const res = await apiFetch('/api/admin/registrations/export', {
-        headers: { 'Authorization': `Bearer ${adminPassword}` }
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'registrados_libro.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Error al exportar CSV');
-      }
-    } catch (err) {
-      console.error('Error exporting CSV:', err);
-    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -260,142 +159,6 @@ export default function App() {
       return dateStr;
     }
   };
-
-  if (isAdmin) {
-    return (
-      <div className="min-h-screen bg-stone-900 text-stone-100 flex flex-col font-sans">
-        {/* Navigation */}
-        <nav className="border-b border-stone-850 bg-stone-950/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="font-serif font-bold text-xl tracking-tight text-white">Pablo Candela</span>
-              <span className="px-2 py-0.5 bg-orange-700/20 text-orange-400 text-xs font-bold rounded border border-orange-500/20">ADMIN</span>
-            </div>
-            <button
-              onClick={handleAdminLogout}
-              className="text-stone-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" /> Salir
-            </button>
-          </div>
-        </nav>
-
-        {/* Content */}
-        <div className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
-          {!isLoggedIn ? (
-            /* Login Form */
-            <div className="max-w-md mx-auto mt-20 bg-stone-950/50 backdrop-blur-sm p-8 rounded-3xl border border-stone-800 shadow-2xl">
-              <div className="text-center mb-8">
-                <div className="w-12 h-12 bg-orange-700/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h2 className="font-serif text-2xl text-white font-semibold">Acceso Administrador</h2>
-                <p className="text-stone-400 text-sm mt-2 font-medium">Ingresá la contraseña para acceder a la base de datos de mails.</p>
-              </div>
-
-              <form onSubmit={handleAdminLogin} className="space-y-6">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-stone-400 mb-2 tracking-wider">Contraseña</label>
-                  <input
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-stone-900 border border-stone-850 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 placeholder:text-stone-600 text-sm font-medium"
-                    required
-                  />
-                </div>
-
-                {adminError && (
-                  <p className="text-red-400 text-sm font-medium">{adminError}</p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={adminLoading}
-                  className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold py-3.5 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {adminLoading ? 'Verificando...' : 'Ingresar'}
-                </button>
-              </form>
-            </div>
-          ) : (
-            /* Dashboard */
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h1 className="text-3xl font-serif font-bold text-white">Contactos Registrados</h1>
-                  <p className="text-stone-400 text-sm mt-1 font-medium">
-                    Gente interesada que descargó la versión gratuita del libro. Total: {registrations.length}
-                  </p>
-                </div>
-                <button
-                  onClick={handleExportCSV}
-                  className="bg-orange-700 hover:bg-orange-650 text-white px-6 py-3 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-900/20 cursor-pointer"
-                >
-                  <Download className="w-4 h-4" /> Exportar a CSV
-                </button>
-              </div>
-
-              {/* Filters */}
-              <div className="relative">
-                <Search className="w-5 h-5 text-stone-500 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-stone-950/50 border border-stone-800 rounded-2xl pl-12 pr-4 py-3.5 text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-sm font-medium"
-                />
-              </div>
-
-              {/* Table */}
-              <div className="bg-stone-950/30 border border-stone-800 rounded-2rem overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-stone-800 bg-stone-950/55 text-[11px] font-bold uppercase tracking-wider text-stone-400">
-                        <th className="px-6 py-4">ID</th>
-                        <th className="px-6 py-4">Nombre</th>
-                        <th className="px-6 py-4">Email</th>
-                        <th className="px-6 py-4">Fecha de descarga</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-850/50 text-sm text-stone-300">
-                      {registrations
-                        .filter((r) =>
-                          r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.email.toLowerCase().includes(searchTerm.toLowerCase())
-                        )
-                        .map((reg) => (
-                          <tr key={reg.id} className="hover:bg-stone-900/10 transition-colors">
-                            <td className="px-6 py-4 text-stone-500 font-mono">#{reg.id}</td>
-                            <td className="px-6 py-4 font-semibold text-white">{reg.name}</td>
-                            <td className="px-6 py-4">{reg.email}</td>
-                            <td className="px-6 py-4 text-stone-400">{formatDate(reg.created_at)}</td>
-                          </tr>
-                        ))}
-                      {registrations.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="px-6 py-12 text-center text-stone-500 italic font-medium">
-                            No se encontraron registros.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen font-sans bg-[#F9F4F0]">
@@ -683,7 +446,6 @@ export default function App() {
           <div className="flex gap-6 text-sm font-medium text-stone-500">
             <a href="#" className="hover:text-orange-700">Contacto</a>
             <a href="#" className="hover:text-orange-700">Prensa</a>
-            <a href="#admin" className="hover:text-orange-700 text-stone-400">Admin</a>
           </div>
         </div>
       </footer>
