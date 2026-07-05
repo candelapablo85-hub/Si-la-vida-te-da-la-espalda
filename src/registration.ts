@@ -8,6 +8,8 @@ export async function submitRegistrationToGoogleSheets(
   url: string,
   payload: RegistrationPayload
 ): Promise<Response> {
+  console.log('[Registro] Enviando a Google Sheets:', { url, payload });
+
   const params = new URLSearchParams();
   params.set('name', payload.name);
   params.set('email', payload.email);

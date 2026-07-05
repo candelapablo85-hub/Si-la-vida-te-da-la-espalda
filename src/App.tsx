@@ -76,6 +76,10 @@ export default function App() {
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
   const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
 
+  React.useEffect(() => {
+    console.log('[Registro] VITE_GOOGLE_SHEETS_URL:', googleSheetsUrl);
+  }, [googleSheetsUrl]);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
