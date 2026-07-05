@@ -24,12 +24,11 @@ test('submits registration payload to Google Sheets URL', async () => {
     assert.equal(response.ok, true);
     assert.equal(calls.length, 1);
 
-    const body = JSON.parse(calls[0].init?.body as string);
-    assert.deepEqual(body, {
-      name: 'Test User',
-      email: 'test@example.com',
-      date: '2026-07-05T00:00:00.000Z',
-    });
+    const body = calls[0].init?.body as string;
+    assert.match(body, /name=Test\+User/);
+    assert.match(body, /email=test%40example.com/);
+    assert.match(body, /date=2026-07-05T00%3A00%3A00.000Z/);
+    assert.match(body, /payload=%7B%22name%22%3A%22Test\+User%22/);
   } finally {
     global.fetch = originalFetch;
   }
