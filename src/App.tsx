@@ -209,15 +209,19 @@ export default function App() {
           });
           data = await res.json();
         } catch (backendError) {
-          console.warn('Backend API failed, falling back to Supabase:', backendError);
+          console.warn('Backend API failed:', backendError);
         }
-      }
 
-      if (res && res.ok && data?.success) {
+        if (res && res.ok && data?.success) {
+          setSuccess(true);
+          triggerDownload();
+        } else {
+          setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
+        }
+      } else {
+        // No backend configured: proceed locally and start the download
         setSuccess(true);
         triggerDownload();
-      } else {
-        setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
       }
     } catch (err) {
       console.error('Unhandled registration error:', err);
