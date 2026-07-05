@@ -254,7 +254,7 @@ export default function App() {
             return;
           } catch (supabaseError) {
             console.error('Direct Supabase registration failed:', supabaseError);
-            setError('No se pudo conectar con el servidor ni con Supabase. Por favor, intenta de nuevo.');
+            setError(`Error directo a Supabase: ${supabaseError instanceof Error ? supabaseError.message : String(supabaseError)}`);
             return;
           }
         }
@@ -265,9 +265,12 @@ export default function App() {
         triggerDownload();
       } else if (!supabaseUrl || !supabaseAnonKey) {
         setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
+      } else if (res && data) {
+        setError(data.error || 'No se pudo procesar el registro. Por favor, intenta de nuevo.');
       }
     } catch (err) {
-      setError('No se pudo procesar el registro. Por favor, intenta de nuevo.');
+      console.error('Unhandled registration error:', err);
+      setError(`No se pudo procesar el registro: ${err instanceof Error ? err.message : String(err)}.`);
     } finally {
       setLoading(false);
     }
