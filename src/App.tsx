@@ -246,7 +246,7 @@ export default function App() {
       }
 
       if (!res || !res.ok || !data?.success) {
-        if (supabaseUrl && supabaseAnonKey) {
+        if (supabaseRestUrl && supabaseAnonKey) {
           try {
             await registerDirectToSupabase(name, email);
             setSuccess(true);
@@ -263,7 +263,7 @@ export default function App() {
       if (res && res.ok && data?.success) {
         setSuccess(true);
         triggerDownload();
-      } else if (!supabaseUrl || !supabaseAnonKey) {
+      } else if (!supabaseRestUrl || !supabaseAnonKey) {
         setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
       } else if (res && data) {
         setError(data.error || 'No se pudo procesar el registro. Por favor, intenta de nuevo.');
