@@ -12,5 +12,5 @@ test('allows overriding the PDF path when configured', () => {
 });
 
 test('normalizes relative PDF paths to a root-relative URL', () => {
-  assert.equal(getPdfDownloadUrl('assets/Adelanto-libro.pdf'), '/assets/Adelanto-libro.pdf');
+  assert.equal(getPdfDownloadUrl('assets/adelanto-libro.pdf'), '/assets/adelanto-libro.pdf');
 });

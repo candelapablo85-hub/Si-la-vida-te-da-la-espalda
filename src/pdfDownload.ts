@@ -1,4 +1,4 @@
-export const DEFAULT_PDF_DOWNLOAD_PATH = '/assets/Adelanto-libro.pdf';
+export const DEFAULT_PDF_DOWNLOAD_PATH = '/assets/adelanto-libro.pdf';
 
 export function getPdfDownloadUrl(configuredUrl?: string) {
   if (!configuredUrl) {

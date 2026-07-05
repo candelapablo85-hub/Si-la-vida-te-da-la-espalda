@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PDF_DOWNLOAD_URL = process.env.PDF_DOWNLOAD_URL || '/assets/Adelanto-libro.pdf';
+const PDF_DOWNLOAD_URL = process.env.PDF_DOWNLOAD_URL || '/assets/adelanto-libro.pdf';
 
 app.use(express.json());
 
