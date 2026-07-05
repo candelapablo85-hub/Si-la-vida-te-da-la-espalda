@@ -10,3 +10,7 @@ test('uses the public PDF path by default', () => {
 test('allows overriding the PDF path when configured', () => {
   assert.equal(getPdfDownloadUrl('/custom.pdf'), '/custom.pdf');
 });
+
+test('normalizes relative PDF paths to a root-relative URL', () => {
+  assert.equal(getPdfDownloadUrl('assets/Adelanto-libro.pdf'), '/assets/Adelanto-libro.pdf');
+});
