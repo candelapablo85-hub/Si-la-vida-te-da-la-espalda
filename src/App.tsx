@@ -84,8 +84,46 @@ export default function App() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [adminLoading, setAdminLoading] = React.useState(false);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001';
-  const apiUrl = (path: string) => `${apiBaseUrl}${path}`;
+  const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
+
+  const apiUrl = (path: string) => apiBaseUrl ? `${apiBaseUrl}${path}` : path;
+
+  const apiFetch = async (path: string, options?: RequestInit) => {
+    if (!apiBaseUrl) {
+      throw new Error('No backend API configurado');
+    }
+    const url = apiUrl(path);
+    return fetch(url, options);
+  };
+
+  const registerDirectToSupabase = async (name: string, email: string) => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('No está configurado Supabase directo.');
+    }
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/leads`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify([{ name, email, created_at: new Date().toISOString() }])
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'No se pudo guardar en Supabase.');
+    }
+
+    return { success: true };
+  };
+
+  const downloadUrl = pdfDownloadUrl || '/api/download';
 
   React.useEffect(() => {
     const handleHashChange = () => {
@@ -106,7 +144,7 @@ export default function App() {
     setAdminLoading(true);
     setAdminError('');
     try {
-      const res = await fetch(apiUrl('/api/admin/login'), {
+      const res = await apiFetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pwd })
@@ -128,7 +166,7 @@ export default function App() {
 
   const fetchRegistrations = async (pwd: string) => {
     try {
-      const res = await fetch(apiUrl('/api/admin/registrations'), {
+      const res = await apiFetch('/api/admin/registrations', {
         headers: { 'Authorization': `Bearer ${pwd}` }
       });
       const data = await res.json();
@@ -153,7 +191,7 @@ export default function App() {
 
   const handleExportCSV = async () => {
     try {
-      const res = await fetch(apiUrl('/api/admin/registrations/export'), {
+      const res = await apiFetch('/api/admin/registrations/export', {
         headers: { 'Authorization': `Bearer ${adminPassword}` }
       });
       if (res.ok) {
@@ -185,22 +223,45 @@ export default function App() {
     setError('');
 
     try {
-      const res = await fetch(apiUrl('/api/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email })
-      });
-      const data = await res.json();
+      let data: any = null;
+      let res: Response | null = null;
 
-      if (res.ok && data.success) {
+      if (apiBaseUrl) {
+        try {
+          res = await apiFetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email })
+          });
+          data = await res.json();
+        } catch (backendError) {
+          console.warn('Backend API failed, falling back to Supabase:', backendError);
+        }
+      }
+
+      if (!res || !res.ok || !data?.success) {
+        if (supabaseUrl && supabaseAnonKey) {
+          try {
+            await registerDirectToSupabase(name, email);
+            setSuccess(true);
+            triggerDownload();
+            return;
+          } catch (supabaseError) {
+            console.error('Direct Supabase registration failed:', supabaseError);
+            setError('No se pudo conectar con el servidor ni con Supabase. Por favor, intenta de nuevo.');
+            return;
+          }
+        }
+      }
+
+      if (res && res.ok && data?.success) {
         setSuccess(true);
-        // Disparar la descarga del PDF
         triggerDownload();
-      } else {
-        setError(data.error || 'Hubo un error al procesar el registro.');
+      } else if (!supabaseUrl || !supabaseAnonKey) {
+        setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
       }
     } catch (err) {
-      setError(`No se pudo conectar con el servidor ${apiUrl('/api/register')}. Por favor, intenta de nuevo.`);
+      setError('No se pudo procesar el registro. Por favor, intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -208,7 +269,7 @@ export default function App() {
 
   const triggerDownload = () => {
     const link = document.createElement('a');
-    link.href = apiUrl('/api/download');
+    link.href = downloadUrl;
     link.download = 'Si la vida te da la espalda - Version Gratuita PDF.pdf';
     document.body.appendChild(link);
     link.click();
