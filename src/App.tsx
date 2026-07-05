@@ -19,6 +19,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { getPdfDownloadUrl } from './pdfDownload';
+import { submitRegistrationToGoogleSheets } from './registration';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -71,19 +72,9 @@ export default function App() {
   const [success, setSuccess] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+  const googleSheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
   const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
-
-  const apiUrl = (path: string) => apiBaseUrl ? `${apiBaseUrl}${path}` : path;
-
-  const apiFetch = async (path: string, options?: RequestInit) => {
-    if (!apiBaseUrl) {
-      throw new Error('No backend API configurado');
-    }
-    const url = apiUrl(path);
-    return fetch(url, options);
-  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,29 +87,29 @@ export default function App() {
     setError('');
 
     try {
-      let data: any = null;
-      let res: Response | null = null;
+      const cleanName = name.trim();
+      const cleanEmail = email.trim().toLowerCase();
+      const payload = {
+        name: cleanName,
+        email: cleanEmail,
+        date: new Date().toISOString(),
+      };
 
-      if (apiBaseUrl) {
+      if (googleSheetsUrl) {
         try {
-          res = await apiFetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email })
-          });
-          data = await res.json();
-        } catch (backendError) {
-          console.warn('Backend API failed:', backendError);
-        }
+          const res = await submitRegistrationToGoogleSheets(googleSheetsUrl, payload);
 
-        if (res && res.ok && data?.success) {
-          setSuccess(true);
-          triggerDownload();
-        } else {
-          setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
+          if (res.ok) {
+            setSuccess(true);
+            triggerDownload();
+          } else {
+            setError('No se pudo registrar en la planilla. Por favor, intenta de nuevo.');
+          }
+        } catch (sheetError) {
+          console.warn('Google Sheets submission failed:', sheetError);
+          setError('No se pudo conectar con la planilla. Por favor, intenta de nuevo.');
         }
       } else {
-        // No backend configured: proceed locally and start the download
         setSuccess(true);
         triggerDownload();
       }
