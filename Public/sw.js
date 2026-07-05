@@ -1,5 +1,5 @@
 const CACHE_NAME = 'pablo-candela-v1';
-const PRECACHE_URLS = ['/assets/Adelanto-libro.pdf'];
+const PRECACHE_URLS = ['/assets/adelanto-libro.pdf'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)));
@@ -19,7 +19,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname === '/assets/Adelanto-libro.pdf') {
+  if (url.pathname === '/assets/adelanto-libro.pdf') {
     event.respondWith(
       fetch(request)
         .then((response) => {
