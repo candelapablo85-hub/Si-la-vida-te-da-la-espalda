@@ -85,9 +85,15 @@ export default function App() {
   const [adminLoading, setAdminLoading] = React.useState(false);
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const supabaseRawUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
+
+  const supabaseRestUrl = supabaseRawUrl
+    ? supabaseRawUrl.replace(/\/$/, '').endsWith('/rest/v1')
+      ? supabaseRawUrl.replace(/\/$/, '')
+      : `${supabaseRawUrl.replace(/\/$/, '')}/rest/v1`
+    : '';
 
   const apiUrl = (path: string) => apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 
@@ -100,11 +106,11 @@ export default function App() {
   };
 
   const registerDirectToSupabase = async (name: string, email: string) => {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseRestUrl || !supabaseAnonKey) {
       throw new Error('No está configurado Supabase directo.');
     }
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/leads`, {
+    const response = await fetch(`${supabaseRestUrl}/leads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
