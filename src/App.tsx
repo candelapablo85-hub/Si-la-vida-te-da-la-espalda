@@ -86,16 +86,8 @@ export default function App() {
   const [adminLoading, setAdminLoading] = React.useState(false);
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-  const supabaseRawUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
   const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
-
-  const supabaseRestUrl = (() => {
-    if (!supabaseRawUrl) return '';
-    const cleanUrl = supabaseRawUrl.replace(/\/$/, '');
-    return cleanUrl.endsWith('/rest/v1') ? cleanUrl : `${cleanUrl}/rest/v1`;
-  })();
 
   const apiUrl = (path: string) => apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 
@@ -105,48 +97,6 @@ export default function App() {
     }
     const url = apiUrl(path);
     return fetch(url, options);
-  };
-
-  const registerDirectToSupabase = async (name: string, email: string) => {
-    if (!supabaseRestUrl || !supabaseAnonKey) {
-      throw new Error('No está configurado Supabase directo.');
-    }
-
-    const response = await fetch(`${supabaseRestUrl}/leads`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify([{ name, email, created_at: new Date().toISOString() }])
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      let message = 'No se pudo guardar en Supabase.';
-      try {
-        const json = JSON.parse(text);
-        if (json.msg) message = String(json.msg);
-        else if (json.message) message = String(json.message);
-        else if (json.error && typeof json.error === 'string') message = json.error;
-      } catch {
-        if (text) message = text;
-      }
-
-      if (response.status === 401 || response.status === 403) {
-        message = `Permisos insuficientes en Supabase. ${message}`;
-      } else if (response.status === 404) {
-        message = 'La URL de Supabase parece incorrecta. Usa la URL base del proyecto sin /rest/v1/.';
-      } else if (response.status === 400) {
-        message = `Error de Supabase: ${message}`;
-      }
-
-      throw new Error(message);
-    }
-
-    return { success: true };
   };
 
   React.useEffect(() => {
@@ -263,28 +213,11 @@ export default function App() {
         }
       }
 
-      if (!res || !res.ok || !data?.success) {
-        if (supabaseRestUrl && supabaseAnonKey) {
-          try {
-            await registerDirectToSupabase(name, email);
-            setSuccess(true);
-            triggerDownload();
-            return;
-          } catch (supabaseError) {
-            console.error('Direct Supabase registration failed:', supabaseError);
-            setError(`Error directo a Supabase: ${supabaseError instanceof Error ? supabaseError.message : String(supabaseError)}`);
-            return;
-          }
-        }
-      }
-
       if (res && res.ok && data?.success) {
         setSuccess(true);
         triggerDownload();
-      } else if (!supabaseRestUrl || !supabaseAnonKey) {
+      } else {
         setError('No se pudo conectar con el servidor. Por favor, intenta de nuevo.');
-      } else if (res && data) {
-        setError(data.error || 'No se pudo procesar el registro. Por favor, intenta de nuevo.');
       }
     } catch (err) {
       console.error('Unhandled registration error:', err);
