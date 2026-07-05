@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { getPdfDownloadUrl } from './pdfDownload';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -88,6 +89,7 @@ export default function App() {
   const supabaseRawUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
+  const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
 
   const supabaseRestUrl = (() => {
     if (!supabaseRawUrl) return '';
@@ -146,8 +148,6 @@ export default function App() {
 
     return { success: true };
   };
-
-  const downloadUrl = pdfDownloadUrl || '/api/download';
 
   React.useEffect(() => {
     const handleHashChange = () => {
