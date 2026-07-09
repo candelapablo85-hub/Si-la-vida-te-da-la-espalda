@@ -19,7 +19,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { getPdfDownloadUrl } from './pdfDownload';
-import { submitRegistrationToGoogleSheets } from './registration';
+import { DEFAULT_GOOGLE_SHEETS_URL, submitRegistrationToGoogleSheets } from './registration';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -72,7 +72,7 @@ export default function App() {
   const [success, setSuccess] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const googleSheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL || '';
+  const googleSheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL || DEFAULT_GOOGLE_SHEETS_URL;
   const pdfDownloadUrl = import.meta.env.VITE_PDF_DOWNLOAD_URL || '';
   const downloadUrl = getPdfDownloadUrl(pdfDownloadUrl);
 

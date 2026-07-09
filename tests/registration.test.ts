@@ -33,3 +33,30 @@ test('submits registration payload to Google Sheets URL', async () => {
     global.fetch = originalFetch;
   }
 });
+
+test('generates a timestamp when date is not provided', async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const originalFetch = global.fetch;
+
+  global.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    await submitRegistrationToGoogleSheets('https://example.com', {
+      name: 'Another User',
+      email: 'another@example.com',
+    });
+
+    const body = calls[0].init?.body as string;
+    assert.match(body, /date=/);
+    assert.match(body, /name=Another\+User/);
+    assert.match(body, /email=another%40example.com/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
