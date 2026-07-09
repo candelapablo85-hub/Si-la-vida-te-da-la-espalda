@@ -18,17 +18,15 @@ export async function submitRegistrationToGoogleSheets(
 
   console.log('[Registro] Enviando a Google Sheets:', { url: endpoint, payload: normalizedPayload });
 
-  const params = new URLSearchParams();
-  params.set('name', normalizedPayload.name);
-  params.set('email', normalizedPayload.email);
-  params.set('date', normalizedPayload.date ?? '');
-  params.set('payload', JSON.stringify(normalizedPayload));
+  const body = JSON.stringify(normalizedPayload);
 
   return fetch(endpoint, {
     method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'Content-Type': 'text/plain;charset=utf-8',
     },
-    body: params.toString(),
+    body,
   });
 }

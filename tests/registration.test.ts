@@ -25,10 +25,9 @@ test('submits registration payload to Google Sheets URL', async () => {
     assert.equal(calls.length, 1);
 
     const body = calls[0].init?.body as string;
-    assert.match(body, /name=Test\+User/);
-    assert.match(body, /email=test%40example.com/);
-    assert.match(body, /date=2026-07-05T00%3A00%3A00.000Z/);
-    assert.match(body, /payload=%7B%22name%22%3A%22Test\+User%22/);
+    assert.match(body, /"name":"Test User"/);
+    assert.match(body, /"email":"test@example.com"/);
+    assert.match(body, /"date":"2026-07-05T00:00:00.000Z"/);
   } finally {
     global.fetch = originalFetch;
   }
@@ -53,9 +52,9 @@ test('generates a timestamp when date is not provided', async () => {
     });
 
     const body = calls[0].init?.body as string;
-    assert.match(body, /date=/);
-    assert.match(body, /name=Another\+User/);
-    assert.match(body, /email=another%40example.com/);
+    assert.match(body, /"date":/);
+    assert.match(body, /"name":"Another User"/);
+    assert.match(body, /"email":"another@example.com"/);
   } finally {
     global.fetch = originalFetch;
   }
